@@ -1,0 +1,7 @@
+# common go tools
+
+# Test server files
+.~db.json
+
+## IDE tools
+.vscode
