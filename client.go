@@ -22,6 +22,7 @@ const (
 	basePathKey         = "BASE_PATH"
 	contentTypeHeader   = "Content-type"
 	jsonContent         = "application/json"
+	keyQuery            = "key"
 )
 
 // Client get basic support to make requests to the admin service.
@@ -34,6 +35,7 @@ type Client struct {
 	service    string
 	httpClient *http.Client
 	headers    http.Header
+	apiKey     string
 }
 
 // MakeNewClient initializes and returns a new fresh service client.
@@ -107,6 +109,12 @@ func (client *Client) WithTimeout(duration time.Duration) *Client {
 	return client
 }
 
+// WithAPIKey adds a 'key' parameter to the call query
+func (client *Client) WithAPIKey(key string) *Client {
+	client.apiKey = key
+	return client
+}
+
 // GET performs a secure GET petition. Final URI will be client base path + provided path
 func (client *Client) GET(path string, data interface{}) (*http.Response, error) {
 	return client.executeCall(http.MethodGet, path, data)
@@ -138,6 +146,10 @@ func (client *Client) executeCall(method, path string, data interface{}) (*http.
 	request, err := http.NewRequest(method, URI, body)
 	if err != nil {
 		return nil, err
+	}
+
+	if client.apiKey != "" {
+		request.URL.Query().Set(keyQuery, client.apiKey)
 	}
 
 	client.injectHeaders(request)
