@@ -149,10 +149,9 @@ func (client *Client) executeCall(method, path string, data interface{}) (*http.
 	}
 
 	if client.shouldAddAPIKey() {
-		fmt.Println("Adding api key: ", client.apiKey)
-		request.URL.Query().Set(keyQuery, client.apiKey)
-		fmt.Println("THE request url: ", request.URL)
-		fmt.Println("The request query: ", request.URL.Query())
+		query := request.URL.Query()
+		query.Add(keyQuery, client.apiKey)
+		request.URL.RawQuery = query.Encode()
 	}
 
 	client.injectHeaders(request)
