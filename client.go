@@ -148,8 +148,11 @@ func (client *Client) executeCall(method, path string, data interface{}) (*http.
 		return nil, err
 	}
 
-	if client.apiKey != "" {
+	if client.shouldAddAPIKey() {
+		fmt.Println("Adding api key: ", client.apiKey)
 		request.URL.Query().Set(keyQuery, client.apiKey)
+		fmt.Println("THE request url: ", request.URL)
+		fmt.Println("The request query: ", request.URL.Query())
 	}
 
 	client.injectHeaders(request)
@@ -194,6 +197,10 @@ func (client *Client) shouldAddPort() bool {
 
 func (client *Client) shouldAddVersion() bool {
 	return client.version != ""
+}
+
+func (client *Client) shouldAddAPIKey() bool {
+	return client.apiKey != ""
 }
 
 func (client *Client) shouldAddService() bool {
