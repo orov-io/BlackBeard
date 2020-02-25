@@ -242,7 +242,7 @@ func TestGET(t *testing.T) {
 		client := getDefaultTestClient()
 
 		Convey("When we make a valid GET call", func() {
-			resp, err := client.GET(postsEndpoint, nil)
+			resp, err := client.GET(postsEndpoint, nil, nil)
 
 			Convey(validResponse, func() {
 				checkResponseIsValid(resp, err)
@@ -256,7 +256,7 @@ func TestGETSadPath(t *testing.T) {
 		client := getDefaultTestClient()
 
 		Convey("When we make a invalid GET call", func() {
-			resp, err := client.GET("/wrong", nil)
+			resp, err := client.GET("/wrong", nil, nil)
 
 			Convey("Then we obtain a not found response", func() {
 				So(err, ShouldBeNil)

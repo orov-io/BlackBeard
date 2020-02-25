@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -116,34 +117,38 @@ func (client *Client) WithAPIKey(key string) *Client {
 }
 
 // GET performs a secure GET petition. Final URI will be client base path + provided path
-func (client *Client) GET(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodGet, path, data)
+func (client *Client) GET(path string, body interface{}, query map[string]string) (*http.Response, error) {
+	return client.executeCall(http.MethodGet, path, body, query)
 }
 
 // POST performs a secure POST petition. Final URI will be client base path + provided path
 func (client *Client) POST(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodPost, path, data)
+	return client.executeCall(http.MethodPost, path, data, nil)
 }
 
 // PUT performs a secure PUT petition. Final URI will be client base path + provided path
 func (client *Client) PUT(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodPut, path, data)
+	return client.executeCall(http.MethodPut, path, data, nil)
 }
 
 // DELETE performs a secure DELETE petition. Final URI will be client base path + provided path
 func (client *Client) DELETE(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodDelete, path, data)
+	return client.executeCall(http.MethodDelete, path, data, nil)
 }
 
-func (client *Client) executeCall(method, path string, data interface{}) (*http.Response, error) {
+func (client *Client) executeCall(method, path string, data interface{}, query map[string]string) (*http.Response, error) {
 	body, err := client.interface2Body(data)
 	if err != nil {
 		return nil, err
 	}
 
-	path = strings.TrimLeft(path, uriSeparator)
-	URI := fmt.Sprintf("%v%v", client.getURI(), path)
-	request, err := http.NewRequest(method, URI, body)
+	endpoint, err := url.Parse(fmt.Sprintf("%v%v", client.getURI(), strings.TrimLeft(path, uriSeparator)))
+	if err != nil {
+		return nil, err
+	}
+
+	addQuery(endpoint, query)
+	request, err := http.NewRequest(method, endpoint.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -315,4 +320,15 @@ func BadRequestError() error {
 func IsBadRequestError(err error) bool {
 	_, ok := err.(*BadRequest)
 	return ok
+}
+
+func addQuery(endpoint *url.URL, query map[string]string) {
+	if query == nil {
+		return
+	}
+
+	for key, value := range query {
+		endpoint.Query().Add(key, value)
+	}
+	return
 }
