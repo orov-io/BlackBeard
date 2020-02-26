@@ -8,22 +8,15 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 const (
-	authorizationHeader = "authorization"
-	uriSeparator        = "/"
-	portSeparator       = ":"
-	basePathKey         = "BASE_PATH"
-	contentTypeHeader   = "Content-type"
-	jsonContent         = "application/json"
-	keyQuery            = "key"
+	uriSeparator  = "/"
+	portSeparator = ":"
+	basePathKey   = "BASE_PATH"
+	keyQuery      = "key"
 )
 
 // Client get basic support to make requests to the admin service.
@@ -49,27 +42,6 @@ func MakeNewClient() *Client {
 	return client
 }
 
-// WithAuthHeader attaches provided bearer to the client.
-func (client *Client) WithAuthHeader(bearer string) *Client {
-	client.headers.Set(authorizationHeader, bearer)
-	return client
-}
-
-// InheritFromParentContext set the client's bearer token to the authorization header
-// in the provided context.
-func (client *Client) InheritFromParentContext(ctx *gin.Context) *Client {
-	client.parentCtx = ctx
-	return client.WithAuthHeader(ctx.GetHeader(authorizationHeader))
-
-}
-
-// WithDefaultBasePath tries to infer the server path from the env variable
-// BASE_PATH.
-func (client *Client) WithDefaultBasePath() *Client {
-	path := os.Getenv(basePathKey)
-	return client.WithBasePath(path)
-}
-
 // WithBasePath set the client's base path.
 func (client *Client) WithBasePath(path string) *Client {
 	client.basePath = strings.TrimRight(path, uriSeparator)
@@ -91,16 +63,6 @@ func (client *Client) ToService(service string) *Client {
 // WithVersion set the API version
 func (client *Client) WithVersion(version string) *Client {
 	client.version = version
-	return client
-}
-
-// WithHeaders adds the key-value pair to client request headers.
-// It internally uses the http.CanonicalHeaderKey to format the key.
-//
-// Please, note that this client is build to provide JSON exchange, so
-// the content type header will be overwrite by application/json
-func (client *Client) WithHeaders(headers http.Header) *Client {
-	client.headers = headers
 	return client
 }
 
@@ -147,16 +109,10 @@ func (client *Client) executeCall(method, path string, data interface{}, query m
 		return nil, err
 	}
 
-	addQuery(endpoint, query)
+	client.addQuery(endpoint, query)
 	request, err := http.NewRequest(method, endpoint.String(), body)
 	if err != nil {
 		return nil, err
-	}
-
-	if client.shouldAddAPIKey() {
-		query := request.URL.Query()
-		query.Add(keyQuery, client.apiKey)
-		request.URL.RawQuery = query.Encode()
 	}
 
 	client.injectHeaders(request)
@@ -211,31 +167,6 @@ func (client *Client) shouldAddService() bool {
 	return client.service != ""
 }
 
-func (client *Client) injectHeaders(request *http.Request) {
-	if client.isUsingCustomHeaders() {
-		client.injectCustomHeaders(request)
-		return
-	}
-
-	client.injectDefaultHeaders(request)
-}
-
-func (client *Client) isUsingCustomHeaders() bool {
-	return len(client.headers) > 0
-}
-
-func (client *Client) injectCustomHeaders(request *http.Request) {
-	request.Header = client.headers
-}
-
-func (client *Client) injectDefaultHeaders(request *http.Request) {
-	client.injectContentTypeHeader(request)
-}
-
-func (client *Client) injectContentTypeHeader(request *http.Request) {
-	request.Header.Set(contentTypeHeader, jsonContent)
-}
-
 func (client *Client) do(request *http.Request) (*http.Response, error) {
 	return client.httpClient.Do(request)
 }
@@ -272,63 +203,21 @@ func (client *Client) GetPort() int {
 	return client.port
 }
 
-// GetPortFromEnvKey returns the port form the env variables if any.
-func GetPortFromEnvKey(key string) int {
-	envPort := os.Getenv(key)
-	port, err := strconv.ParseInt(envPort, 10, 32)
-	if err != nil {
-		return 0
-	}
-	return int(port)
-}
-
-// CheckResponse checks for a valid response.
-//
-// One response will be valid if err is nil and response code is 200 ≤ code < 400
-func CheckResponse(err error, resp *http.Response) error {
-	if err != nil {
-		return err
-	}
-
-	if !isCallOK(resp) {
-		return BadRequestError()
-	}
-
-	return nil
-}
-
-func isCallOK(resp *http.Response) bool {
-	return resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusBadRequest
-}
-
-// BadRequest is used when user try to initialize the database and
-//it is already initialized
-type BadRequest struct {
-	code int
-}
-
-func (e *BadRequest) Error() string {
-	return fmt.Sprintf("Bad response code: %v", e.code)
-}
-
-// BadRequestError returns a new BadRequest error
-func BadRequestError() error {
-	return &BadRequest{}
-}
-
-// IsBadRequestError checks if the error is a BadRequest error
-func IsBadRequestError(err error) bool {
-	_, ok := err.(*BadRequest)
-	return ok
-}
-
-func addQuery(endpoint *url.URL, query map[string]string) {
+func (client *Client) addQuery(endpoint *url.URL, query map[string]string) {
 	if query == nil {
 		return
 	}
 
+	queryValues, _ := url.ParseQuery(endpoint.RawQuery)
+
 	for key, value := range query {
-		endpoint.Query().Add(key, value)
+		queryValues.Add(key, value)
 	}
+
+	if client.shouldAddAPIKey() {
+		queryValues.Add(keyQuery, client.apiKey)
+	}
+
+	endpoint.RawQuery = queryValues.Encode()
 	return
 }

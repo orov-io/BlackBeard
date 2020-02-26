@@ -148,20 +148,6 @@ func TestInheritFromParentContext(t *testing.T) {
 	})
 }
 
-func TestWithDefaultBasePath(t *testing.T) {
-	Convey("Given a project id key-value on env variables", t, func() {
-		os.Setenv(testBasePathKey, testBasePath)
-
-		Convey("When it's initialized with the default base path", func() {
-			client := api.MakeNewClient().WithDefaultBasePath()
-
-			Convey("Then client base path is set to default base path", func() {
-				So(client.GetBasePath(), ShouldEqual, testBasePath)
-			})
-		})
-	})
-}
-
 func TestWithPort(t *testing.T) {
 	Convey("Given a target service", t, func() {
 		port := testPort
@@ -202,21 +188,6 @@ func TestWithVersion(t *testing.T) {
 			Convey("Then service is sets on the client", func() {
 
 				So(client.GetVersion(), ShouldEqual, version)
-			})
-		})
-	})
-}
-
-func TestWhitHeaders(t *testing.T) {
-	Convey("Given a set of valid headers", t, func() {
-		headers := getTestHeaders()
-
-		Convey("When the client is initialized with custom headers", func() {
-			client := api.MakeNewClient().WithHeaders(headers)
-
-			Convey("Then headers is sets on the client", func() {
-
-				So(client.GetHeaders(), ShouldResemble, headers)
 			})
 		})
 	})
