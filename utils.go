@@ -123,6 +123,10 @@ func ParseOnePaginated(resp *http.Response, receiver interface{}) error {
 		return err
 	}
 
+	if len(paginatedData.Data) == 0 {
+		return new(NoDataFetched)
+	}
+
 	return ParseTo(paginatedData.Data[0], receiver)
 }
 
@@ -167,19 +171,19 @@ func isAPointer(i interface{}) bool {
 	return reflect.ValueOf(i).Kind() == reflect.Ptr
 }
 
-// NotAPointerError is used to send a hidden error
+// NotAPointerError is used for a non pointer parameter error.
 type NotAPointerError struct{}
 
 func (e *NotAPointerError) Error() string {
 	return fmt.Sprintf("Receiver is not a pointer")
 }
 
-// NewNotAPointerError returns a new NotAPointerErrorError error
+// NewNotAPointerError returns a new NotAPointerErrorError error.
 func NewNotAPointerError() error {
 	return &NotAPointerError{}
 }
 
-// IsNotAPointerError checks if the error is a NotAPointerError error
+// IsNotAPointerError checks if the error is a NotAPointerError error.
 func IsNotAPointerError(err error) bool {
 	_, ok := err.(*NotAPointerError)
 	return ok
@@ -187,4 +191,22 @@ func IsNotAPointerError(err error) bool {
 
 func isValidResponse(response *http.Response) bool {
 	return response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusBadRequest
+}
+
+// NoDataFetched is used when response is valid, bad data is empty
+type NoDataFetched struct{}
+
+func (e *NoDataFetched) Error() string {
+	return fmt.Sprintf("No data fetched from response")
+}
+
+// NewNoDataFetched returns a new NoDataFetchedError error.
+func NewNoDataFetched() error {
+	return &NoDataFetched{}
+}
+
+// IsNoDataFetched checks if the error is a NoDataFetched error.
+func IsNoDataFetched(err error) bool {
+	_, ok := err.(*NoDataFetched)
+	return ok
 }
