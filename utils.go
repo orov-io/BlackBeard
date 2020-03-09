@@ -67,7 +67,7 @@ func ParseAllPaginated(resp *http.Response, receiver interface{}) error {
 		return err
 	}
 
-	return ParseTo(paginatedData, receiver)
+	return ParseTo(paginatedData.Data, receiver)
 }
 
 func getPaginatedData(resp *http.Response) (*PaginatedResponse, error) {
