@@ -45,6 +45,9 @@ func (client *Client) injectHeaders(request *http.Request) {
 // InheritFromParentContext set the client's headers to headers founded in the
 // provided context
 func (client *Client) InheritFromParentContext(ctx *gin.Context) *Client {
+	if ctx == nil || ctx.Request == nil {
+		return client
+	}
 	if len(ctx.Request.Header) == 0 {
 		return client
 	}

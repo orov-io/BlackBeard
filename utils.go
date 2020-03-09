@@ -130,6 +130,21 @@ func ParseOnePaginated(resp *http.Response, receiver interface{}) error {
 	return ParseTo(paginatedData.Data[0], receiver)
 }
 
+// ParseResponseTo parses the response body to the receiver.
+func ParseResponseTo(resp *http.Response, receiver interface{}) error {
+	if !isValidResponse(resp) {
+		return parseError(resp)
+	}
+
+	body, err := Body2Interface(resp)
+	if err != nil {
+		return err
+	}
+
+	return ParseTo(body, receiver)
+
+}
+
 // ParseTo parses generic interface to another. As this is a generic function
 // that makes a high use of json marshaller, it has some additional computational
 // cost.
