@@ -52,10 +52,7 @@ func (client *Client) InheritFromParentContext(ctx *gin.Context) *Client {
 		return client
 	}
 
-	client.parentCtx = ctx
-	for header := range ctx.Request.Header {
-		client.headers.Set(header, ctx.GetHeader(header))
-	}
+	client.headers.Set(authorizationHeader, ctx.GetHeader(authorizationHeader))
 	return client
 }
 
