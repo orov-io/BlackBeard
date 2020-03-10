@@ -93,27 +93,40 @@ func parseError(resp *http.Response) error {
 	errorResponse := new(ErrorResponse)
 	body, err := Body2Interface(resp)
 	if err != nil {
-		return &ErrorResponse{
-			Name: "No standar error found",
-			Code: resp.StatusCode,
-			Errors: map[string]string{
-				"parsed error": err.Error(),
-			},
-		}
+		return inferError(resp)
 	}
 
 	err = ParseTo(body, errorResponse)
 	if err != nil {
-		return &ErrorResponse{
-			Name: "No standar error found",
-			Code: resp.StatusCode,
-			Errors: map[string]string{
-				"parsed error": err.Error(),
-			},
-		}
+		return inferError(resp)
 	}
 
 	return errorResponse
+}
+
+func inferError(resp *http.Response) error {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return throwNotStandarError(resp, err)
+	}
+
+	return &ErrorResponse{
+		Name: "No standar error found",
+		Code: resp.StatusCode,
+		Errors: map[string]string{
+			"body": string(body),
+		},
+	}
+}
+
+func throwNotStandarError(resp *http.Response, err error) error {
+	return &ErrorResponse{
+		Name: "No standar error found",
+		Code: resp.StatusCode,
+		Errors: map[string]string{
+			"parsed error": err.Error(),
+		},
+	}
 }
 
 // ParseOnePaginated parses first item of the response data
