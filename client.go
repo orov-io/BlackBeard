@@ -79,7 +79,7 @@ func (client *Client) WithAPIKey(key string) *Client {
 }
 
 // GET performs a secure GET petition. Final URI will be client base path + provided path
-func (client *Client) GET(path string, body interface{}, url.Values) (*http.Response, error) {
+func (client *Client) GET(path string, body interface{}, query map[string][]string) (*http.Response, error) {
 	return client.executeCall(http.MethodGet, path, body, query)
 }
 
