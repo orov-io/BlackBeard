@@ -245,7 +245,7 @@ func TestPOST(t *testing.T) {
 			resp, err := client.POST(postsEndpoint, map[string]interface{}{
 				"title":  "Desayuno con diamantes",
 				"author": "Truman Capote",
-			})
+			}, nil)
 
 			Convey(validResponse, func() {
 				checkResponseIsValid(resp, err)
@@ -262,7 +262,7 @@ func TestPUT(t *testing.T) {
 			resp, err := client.PUT(postsEndpoint+"/1", map[string]interface{}{
 				"title":  "Desayuno con Diamantes",
 				"author": "Truman Capote",
-			})
+			}, nil)
 
 			Convey(validResponse, func() {
 				checkResponseIsValid(resp, err)
@@ -276,7 +276,7 @@ func TestDELETE(t *testing.T) {
 		client := getDefaultTestClient()
 
 		Convey("When we make a valid DELETE call", func() {
-			resp, err := client.DELETE(postsEndpoint+"/1", nil)
+			resp, err := client.DELETE(postsEndpoint+"/1", nil, nil)
 
 			Convey(validResponse, func() {
 				checkResponseIsValid(resp, err)

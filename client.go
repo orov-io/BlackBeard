@@ -79,26 +79,26 @@ func (client *Client) WithAPIKey(key string) *Client {
 }
 
 // GET performs a secure GET petition. Final URI will be client base path + provided path
-func (client *Client) GET(path string, body interface{}, query map[string]string) (*http.Response, error) {
+func (client *Client) GET(path string, body interface{}, url.Values) (*http.Response, error) {
 	return client.executeCall(http.MethodGet, path, body, query)
 }
 
 // POST performs a secure POST petition. Final URI will be client base path + provided path
-func (client *Client) POST(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodPost, path, data, nil)
+func (client *Client) POST(path string, data interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodPost, path, data, query)
 }
 
 // PUT performs a secure PUT petition. Final URI will be client base path + provided path
-func (client *Client) PUT(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodPut, path, data, nil)
+func (client *Client) PUT(path string, data interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodPut, path, data, query)
 }
 
 // DELETE performs a secure DELETE petition. Final URI will be client base path + provided path
-func (client *Client) DELETE(path string, data interface{}) (*http.Response, error) {
-	return client.executeCall(http.MethodDelete, path, data, nil)
+func (client *Client) DELETE(path string, data interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodDelete, path, data, query)
 }
 
-func (client *Client) executeCall(method, path string, data interface{}, query map[string]string) (*http.Response, error) {
+func (client *Client) executeCall(method, path string, data interface{}, query map[string][]string) (*http.Response, error) {
 	body, err := client.interface2Body(data)
 	if err != nil {
 		return nil, err
@@ -203,15 +203,17 @@ func (client *Client) GetPort() int {
 	return client.port
 }
 
-func (client *Client) addQuery(endpoint *url.URL, query map[string]string) {
+func (client *Client) addQuery(endpoint *url.URL, query map[string][]string) {
 	if query == nil {
 		return
 	}
 
 	queryValues, _ := url.ParseQuery(endpoint.RawQuery)
 
-	for key, value := range query {
-		queryValues.Add(key, value)
+	for key, values := range query {
+		for _, value := range values {
+			queryValues.Add(key, value)
+		}
 	}
 
 	if client.shouldAddAPIKey() {
