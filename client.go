@@ -90,7 +90,13 @@ func (client *Client) POST(path string, data interface{}, query map[string][]str
 
 // MULTIPART performs a secure POST petition setting content type to be multipart/form-data.
 // Final URI will be client base path + provided path
-func (client *Client) MULTIPART(path string, data interface{}, query map[string][]string) (*http.Response, error) {
+// You will need to provide the content type with boundary in formDataContentType.
+func (client *Client) MULTIPART(
+	path string,
+	data interface{},
+	query map[string][]string,
+	formDataContentType string,
+) (*http.Response, error) {
 	headers := client.headers.Clone()
 	client.headers.Set(contentTypeHeader, multipartContent)
 	resp, err := client.executeCall(http.MethodPost, path, data, query)
