@@ -12,7 +12,10 @@ const (
 	contentTypeHeader   = "Content-type"
 )
 
-const jsonContent = "application/json"
+const (
+	jsonContent      = "application/json"
+	multipartContent = "multipart/form-data"
+)
 
 // WithTraceID sets the X-trace-id header to provided trace id.
 func (client *Client) WithTraceID(id string) *Client {

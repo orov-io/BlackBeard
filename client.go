@@ -88,6 +88,16 @@ func (client *Client) POST(path string, data interface{}, query map[string][]str
 	return client.executeCall(http.MethodPost, path, data, query)
 }
 
+// MULTIPART performs a secure POST petition setting content type to be multipart/form-data.
+// Final URI will be client base path + provided path
+func (client *Client) MULTIPART(path string, data interface{}, query map[string][]string) (*http.Response, erro) {
+	headers := client.headers.Clone()
+	client.headers.Set(contentTypeHeader, multipartContent)
+	resp, err := client.executeCall(http.MethodPost, path, data, query)
+	client.headers = headers
+	return resp, err
+}
+
 // PUT performs a secure PUT petition. Final URI will be client base path + provided path
 func (client *Client) PUT(path string, data interface{}, query map[string][]string) (*http.Response, error) {
 	return client.executeCall(http.MethodPut, path, data, query)
