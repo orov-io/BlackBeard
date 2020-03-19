@@ -98,7 +98,7 @@ func (client *Client) MULTIPART(
 	formDataContentType string,
 ) (*http.Response, error) {
 	headers := client.headers.Clone()
-	client.headers.Set(contentTypeHeader, multipartContent)
+	client.headers.Set(contentTypeHeader, formDataContentType)
 	resp, err := client.executeCall(http.MethodPost, path, data, query)
 	client.headers = headers
 	return resp, err
