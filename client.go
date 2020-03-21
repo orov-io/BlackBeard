@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -84,8 +87,24 @@ func (client *Client) GET(path string, body interface{}, query map[string][]stri
 }
 
 // POST performs a secure POST petition. Final URI will be client base path + provided path
-func (client *Client) POST(path string, data interface{}, query map[string][]string) (*http.Response, error) {
-	return client.executeCall(http.MethodPost, path, data, query)
+func (client *Client) POST(path string, body interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodPost, path, body, query)
+}
+
+// MultipartBody models the body of a multipart POST call, where:
+// files: a map in with the key represent the form key, and the value represents the path to the file.
+// params: A map with the key-values to be send in the body with the files.
+type MultipartBody struct {
+	Params map[string]string
+	Files  map[string]string
+}
+
+// NewMultipartBody returns a new struct with desired values attached.
+func NewMultipartBody(params map[string]string, files map[string]string) MultipartBody {
+	return MultipartBody{
+		Params: params,
+		Files:  files,
+	}
 }
 
 // MULTIPART performs a secure POST petition setting content type to be multipart/form-data.
@@ -93,29 +112,66 @@ func (client *Client) POST(path string, data interface{}, query map[string][]str
 // You will need to provide the content type with boundary in formDataContentType.
 func (client *Client) MULTIPART(
 	path string,
-	data interface{},
+	bodyData MultipartBody,
 	query map[string][]string,
-	formDataContentType string,
 ) (*http.Response, error) {
+
+	body, formDataContentType, err := client.getMultipartBody(bodyData)
+	if err != nil {
+		return nil, err
+	}
+
 	headers := client.headers.Clone()
 	client.headers.Set(contentTypeHeader, formDataContentType)
-	resp, err := client.executeCall(http.MethodPost, path, data, query)
+	resp, err := client.executeCall(http.MethodPost, path, body, query)
 	client.headers = headers
 	return resp, err
 }
 
+func (client *Client) getMultipartBody(data MultipartBody) (body *bytes.Buffer, contentType string, err error) {
+	body = &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, path := range data.Files {
+		var file *os.File
+		file, err = os.Open(path)
+		if err != nil {
+			return
+		}
+
+		var part io.Writer
+		part, err = writer.CreateFormFile(key, filepath.Base(path))
+		if err != nil {
+			return
+		}
+		_, err = io.Copy(part, file)
+		file.Close()
+	}
+
+	for key, val := range data.Params {
+		_ = writer.WriteField(key, val)
+	}
+	err = writer.Close()
+	if err != nil {
+		return
+	}
+
+	contentType = writer.FormDataContentType()
+	return
+}
+
 // PUT performs a secure PUT petition. Final URI will be client base path + provided path
-func (client *Client) PUT(path string, data interface{}, query map[string][]string) (*http.Response, error) {
-	return client.executeCall(http.MethodPut, path, data, query)
+func (client *Client) PUT(path string, body interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodPut, path, body, query)
 }
 
 // DELETE performs a secure DELETE petition. Final URI will be client base path + provided path
-func (client *Client) DELETE(path string, data interface{}, query map[string][]string) (*http.Response, error) {
-	return client.executeCall(http.MethodDelete, path, data, query)
+func (client *Client) DELETE(path string, body interface{}, query map[string][]string) (*http.Response, error) {
+	return client.executeCall(http.MethodDelete, path, body, query)
 }
 
-func (client *Client) executeCall(method, path string, data interface{}, query map[string][]string) (*http.Response, error) {
-	body, err := client.interface2Body(data)
+func (client *Client) executeCall(method, path string, body interface{}, query map[string][]string) (*http.Response, error) {
+	bodyReader, err := client.interface2Reader(body)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +182,7 @@ func (client *Client) executeCall(method, path string, data interface{}, query m
 	}
 
 	client.addQuery(endpoint, query)
-	request, err := http.NewRequest(method, endpoint.String(), body)
+	request, err := http.NewRequest(method, endpoint.String(), bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +191,14 @@ func (client *Client) executeCall(method, path string, data interface{}, query m
 	return client.do(request)
 }
 
-func (client *Client) interface2Body(data interface{}) (io.Reader, error) {
+func (client *Client) interface2Reader(data interface{}) (io.Reader, error) {
 	if data == nil {
 		return nil, nil
+	}
+
+	reader, ok := data.(io.Reader)
+	if ok {
+		return reader, nil
 	}
 
 	requestBody, err := json.Marshal(data)
