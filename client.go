@@ -81,6 +81,11 @@ func (client *Client) WithAPIKey(key string) *Client {
 	return client
 }
 
+// GetFullPath returns the full path to the service base URL
+func (client *Client) GetFullPath() string {
+	return client.getURI()
+}
+
 // GET performs a secure GET petition. Final URI will be client base path + provided path
 func (client *Client) GET(path string, body interface{}, query map[string][]string) (*http.Response, error) {
 	return client.executeCall(http.MethodGet, path, body, query)
