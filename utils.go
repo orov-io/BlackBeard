@@ -221,6 +221,11 @@ func isValidResponse(response *http.Response) bool {
 	return response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusBadRequest
 }
 
+// IsValidResponse returns if the response status is a 2XX or 3XX code.
+func IsValidResponse(response *http.Response) bool {
+	return isValidResponse(response)
+}
+
 // NoDataFetched is used when response is valid, bad data is empty
 type NoDataFetched struct{}
 
