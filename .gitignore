@@ -5,6 +5,8 @@
 
 ## IDE tools
 .vscode
+*.code-workspace
 
 ## Env files
 .env
+
