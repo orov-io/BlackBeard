@@ -36,6 +36,7 @@ type Client struct {
 	headers    http.Header
 	apiKey     string
 	cacheDB    *badger.DB
+	logger     Logger
 }
 
 // MakeNewClient initializes and returns a new fresh service client.
@@ -44,7 +45,14 @@ func MakeNewClient() *Client {
 	client.httpClient = &http.Client{}
 	client.ctx = context.Background()
 	client.headers = http.Header{}
+	client.logger = &noLogger{}
 
+	return client
+}
+
+// WithLogger attach a logger to the client
+func (client *Client) WithLogger(logger Logger) *Client {
+	client.logger = logger
 	return client
 }
 
@@ -187,6 +195,7 @@ func (client *Client) DELETE(path string, body interface{}, query map[string][]s
 
 func (client *Client) executeCall(method, path string, body interface{}, query map[string][]string) (*http.Response, error) {
 	if response, isCached := client.callCached(method, path, body, query); isCached {
+		client.logger.Debugf("Cached response for [%s] %s\n", method, path)
 		return response, nil
 	}
 
