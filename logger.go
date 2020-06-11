@@ -16,8 +16,6 @@ type Logger interface {
 	Fatalf(format string, args ...interface{})
 
 	Panicf(format string, args ...interface{})
-
-	WithFields(keyValues Fields) Logger
 }
 
 type noLogger struct{}
@@ -44,8 +42,4 @@ func (l *noLogger) Fatalf(format string, args ...interface{}) {
 
 func (l *noLogger) Panicf(format string, args ...interface{}) {
 	return
-}
-
-func (l *noLogger) WithFields(keyValues Fields) Logger {
-	return l
 }
