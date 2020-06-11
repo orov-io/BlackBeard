@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/dgraph-io/badger/v2"
 )
 
 const (
@@ -33,6 +35,7 @@ type Client struct {
 	httpClient *http.Client
 	headers    http.Header
 	apiKey     string
+	cacheDB    *badger.DB
 }
 
 // MakeNewClient initializes and returns a new fresh service client.
@@ -42,6 +45,13 @@ func MakeNewClient() *Client {
 	client.ctx = context.Background()
 	client.headers = http.Header{}
 
+	return client
+}
+
+// WithCache enables caching results for this client object.
+func (client *Client) WithCache() *Client {
+	options := badger.DefaultOptions("").WithInMemory(true)
+	client.cacheDB, _ = badger.Open(options)
 	return client
 }
 
@@ -176,6 +186,10 @@ func (client *Client) DELETE(path string, body interface{}, query map[string][]s
 }
 
 func (client *Client) executeCall(method, path string, body interface{}, query map[string][]string) (*http.Response, error) {
+	if response, isCached := client.callCached(method, path, body, query); isCached {
+		return response, nil
+	}
+
 	bodyReader, err := client.interface2Reader(body)
 	if err != nil {
 		return nil, err
@@ -193,7 +207,68 @@ func (client *Client) executeCall(method, path string, body interface{}, query m
 	}
 
 	client.injectHeaders(request)
-	return client.do(request)
+	response, err := client.do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	client.cache(method, path, body, query, response)
+	return response, nil
+}
+
+func (client *Client) callCached(method, path string, body interface{}, query map[string][]string) (*http.Response, bool) {
+	if client.cacheDB == nil {
+		return nil, false
+	}
+	key := getCacheKey(method, path, body, query)
+	response := new(http.Response)
+	err := client.cacheDB.View(getResponseFromCache(response, key))
+	return response, err != nil
+}
+
+func getCacheKey(method, path string, body interface{}, query map[string][]string) []byte {
+	key := make([]byte, 0)
+
+	key = appendBytes(key, method)
+	key = appendBytes(key, path)
+	key = appendBytes(key, body)
+	key = appendBytes(key, query)
+
+	return key
+}
+
+func appendBytes(key []byte, value interface{}) []byte {
+	b, _ := json.Marshal(value)
+	return append(key, b...)
+}
+
+func getResponseFromCache(response *http.Response, key []byte) func(txn *badger.Txn) error {
+	return func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err == badger.ErrKeyNotFound {
+			response = nil
+			return nil
+		}
+
+		err = item.Value(func(val []byte) error {
+			return json.Unmarshal(val, &response)
+		})
+
+		return err
+	}
+}
+
+func (client *Client) cache(method, path string, body interface{}, query map[string][]string, response *http.Response) {
+	if client.cacheDB == nil {
+		return
+	}
+
+	key := getCacheKey(method, path, body, query)
+	value, _ := json.Marshal(response)
+	client.cacheDB.Update(func(txn *badger.Txn) error {
+		err := txn.Set(key, value)
+		return err
+	})
 }
 
 func (client *Client) interface2Reader(data interface{}) (io.Reader, error) {
